@@ -1,58 +1,59 @@
-var testHistoricalData = require('./testHistoricalData')
-var serverConstants = require('./serverConstants')
+const AWS = require('aws-sdk')
 
-var AWS = require("aws-sdk");
-AWS.config.update({
-    region: serverConstants.region,
-    endpoint: serverConstants.endpoint
-});
-AWS.config.loadFromPath('../.aws/config.json');
+const serverConstants = require('./serverConstants')
+const logger = require('./logger')
 
-var dynamoDB = new AWS.DynamoDB.DocumentClient();
+class DynamoDBWriter {
+    constructor() {
+        AWS.config.update({
+            region: serverConstants.region,
+            endpoint: serverConstants.endpoint
+        })
+        AWS.config.loadFromPath('../.aws/config.json')
 
-const stock_quotes = testHistoricalData.testHistoricalData
+        this.dynamoDB = new AWS.DynamoDB.DocumentClient()
+    }
 
-function transformQuote(quote){
-    return { 
-        "PutRequest": { 
-            "Item": { 
-                "tickerdate" : `${quote.ticker}${quote.date}`,
-                "ticker": quote.ticker,
-                "date": quote.date,
-                "open": quote.open,
-                "close": quote.close,
-                "high": quote.high,
-                "low": quote.low,
-                "volume": quote.volume,
-                "change": quote.change,
-                "changePercent": quote.changePercent
+    dynamoDbBatchWrite(listOfQuotes) {
+        const quotes = []
+        listOfQuotes.forEach(quote => {
+            quotes.push(this.transformQuote(quote))
+        })
+        const tableName = serverConstants.stockQuotes
+        const params = {
+            RequestItems: {
+                [tableName]: quotes
+            }
+        }
+        this.dynamoDB.batchWrite(params, err => {
+            if (err) {
+                logger.error('Unable to add stock', '. Error JSON:', JSON.stringify(err, null, 2))
+            } else {
+                logger.log('PutItem succeeded:')
+            }
+        })
+    }
+
+    transformQuote(quote) {
+        return {
+            PutRequest: {
+                Item: {
+                    tickerdate: `${quote.ticker}${quote.date}`,
+                    ticker: quote.ticker,
+                    date: quote.date,
+                    open: quote.open,
+                    close: quote.close,
+                    high: quote.high,
+                    low: quote.low,
+                    volume: quote.volume,
+                    change: quote.change,
+                    changePercent: quote.changePercent
+                }
             }
         }
     }
 }
 
-function writeListOfQuotesToDynamo(ticker, listOfQuotes){
-    var quotes = []
-    listOfQuotes.forEach(function(quote){
-        quotes.push(transformQuote({ticker, ...quote}))
-    })
-    const tableName = serverConstants.stockQuotes
-    var params = {
-        RequestItems: {
-            'Stock_Quotes': quotes
-        }
-    }
-    dynamoDB.batchWrite(params, function(err, data){
-        if (err) {
-            console.error("Unable to add stock", ticker, ". Error JSON:", JSON.stringify(err, null, 2));
-        } else {
-            console.log("PutItem succeeded:", ticker);
-        }
-    })
+module.exports = {
+    DynamoDBWriter
 }
-
-for(var ticker in stock_quotes){
-    const listOfQuotes = stock_quotes[ticker]
-    writeListOfQuotesToDynamo(ticker, listOfQuotes)
-}
-

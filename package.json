@@ -1,23 +1,56 @@
 {
-  "name": "stock-analysis-dynamodb",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/dirktunak/stock-analysis-dynamodb.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/dirktunak/stock-analysis-dynamodb/issues"
-  },
-  "homepage": "https://github.com/dirktunak/stock-analysis-dynamodb#readme",
-  "dependencies": {
-    "aws-sdk": "^2.486.0",
-    "uuid": "^3.3.2"
-  }
+    "name": "stock-analysis-dynamodb",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "jest",
+        "lint": "eslint 'src/**/*.js'",
+        "lint:fix": "eslint 'src/**/*.js' --fix",
+        "jest": "jest"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/dirktunak/stock-analysis-dynamodb.git"
+    },
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/dirktunak/stock-analysis-dynamodb/issues"
+    },
+    "homepage": "https://github.com/dirktunak/stock-analysis-dynamodb#readme",
+    "dependencies": {
+        "aws-sdk": "^2.486.0",
+        "jsonschema": "^1.2.4",
+        "lodash": "^4.17.11",
+        "uuid": "^3.3.2"
+    },
+    "devDependencies": {
+        "eslint": "^5.16.0",
+        "eslint-config-airbnb": "^17.1.0",
+        "eslint-config-prettier": "^4.3.0",
+        "eslint-plugin-import": "^2.17.2",
+        "eslint-plugin-jsx-a11y": "^6.2.1",
+        "eslint-plugin-prettier": "^3.1.0",
+        "eslint-plugin-react": "^7.13.0",
+        "jest": "^24.8.0",
+        "prettier": "^1.18.2"
+    },
+    "prettier": {
+        "arrowParens": "avoid",
+        "bracketSpacing": true,
+        "htmlWhitespaceSensitivity": "css",
+        "insertPragma": false,
+        "jsxBracketSameLine": true,
+        "jsxSingleQuote": true,
+        "parser": "babel",
+        "proseWrap": "preserve",
+        "requirePragma": false,
+        "semi": false,
+        "singleQuote": true,
+        "tabWidth": 4,
+        "trailingComma": "none",
+        "useTabs": false,
+        "printWidth": 100
+    }
 }
