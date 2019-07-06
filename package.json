@@ -7,7 +7,9 @@
         "test": "jest",
         "lint": "eslint 'src/**/*.js'",
         "lint:fix": "eslint 'src/**/*.js' --fix",
-        "jest": "jest"
+        "jest": "jest",
+        "start": "node src/express/server.js",
+        "watch": "nodemon src/express/server.js"
     },
     "repository": {
         "type": "git",
@@ -20,12 +22,19 @@
     },
     "homepage": "https://github.com/dirktunak/stock-analysis-dynamodb#readme",
     "dependencies": {
+        "assert": "^2.0.0",
         "aws-sdk": "^2.486.0",
+        "body-parser": "^1.19.0",
+        "connect-dynamodb": "^2.0.3",
+        "express": "^4.17.1",
+        "express-session": "^1.16.2",
         "jsonschema": "^1.2.4",
         "lodash": "^4.17.11",
+        "pbkdf2-password": "^1.2.1",
         "uuid": "^3.3.2"
     },
     "devDependencies": {
+        "ejs": "^2.6.2",
         "eslint": "^5.16.0",
         "eslint-config-airbnb": "^17.1.0",
         "eslint-config-prettier": "^4.3.0",
@@ -33,8 +42,8 @@
         "eslint-plugin-jsx-a11y": "^6.2.1",
         "eslint-plugin-prettier": "^3.1.0",
         "eslint-plugin-react": "^7.13.0",
-        "express": "^4.17.1",
         "jest": "^24.8.0",
+        "nodemon": "^1.19.1",
         "prettier": "^1.18.2"
     },
     "prettier": {
