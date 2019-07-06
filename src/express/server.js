@@ -1,6 +1,8 @@
 const express = require('express')
 const AWS = require('aws-sdk')
 const path = require('path')
+const _ = require('lodash')
+const bodyParser = require('body-parser')
 
 const app = (module.exports = express())
 const hasher = require('pbkdf2-password')({ digest: 'sha1' })
@@ -8,6 +10,11 @@ const session = require('express-session')
 
 app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname, 'views'))
+
+const frontendURL = {
+    develop: 'http://localhost:8080/',
+    production: ''
+}
 
 /*
 const assert = require('assert')
@@ -31,7 +38,7 @@ app.use(
 )
 */
 
-app.use(express.urlencoded({ extended: false }))
+app.use(bodyParser.json())
 app.use(
     session({
         resave: false,
@@ -39,43 +46,61 @@ app.use(
         secret: 'express server temp secret'
     })
 )
+app.use(function(req, res, next) {
+    const err = req.session.error
+    const msg = req.session.success
+    delete req.session.error
+    delete req.session.success
+    res.locals.message = ''
+    if (err) {
+        res.locals.message = `<p class="msg error">${err}</p>`
+    }
+    if (msg) {
+        res.locals.message = `<p class="msg success">${msg}</p>`
+    }
+    next()
+})
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', 'http://localhost:8080')
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
+    next()
+})
 
 const users = {
-    derek: {
-        name: 'derek'
-    }
 }
 
 function generateUser(username, password) {
-    users[username] = { name: username }
     return new Promise((resolve, reject) => {
+        if(!_.isUndefined(users[username])){
+            return reject(new Error('Username already taken'))
+        }
+        users[username] = { name: username }
         hasher({ password }, (err, pass, salt, hash) => {
             if (err) {
                 return reject(new Error('error generating hash password'))
             }
             users[username].salt = salt
             users[username].hash = hash
-            console.log(JSON.stringify(users, null, 4))
             resolve(username)
         })
     })
 }
 
 function authenticate(username, password) {
-    const user = users[username]
-    console.log('authenticate user', user)
     return new Promise((resolve, reject) => {
+        const errorMessage = 'Username and password combo invalid'
+        const user = users[username]
+        if (!user || _.isUndefined(user)) {
+            return reject(Error(errorMessage))
+        }
         hasher({ password, salt: user.salt }, (err, pass, salt, hash) => {
             if (err) {
-                console.log(err)
                 throw err
             }
             if (hash === user.hash) {
-                console.log(`login as ${user.name}`)
                 resolve({ user: user.name })
             } else {
-                console.log('will reject')
-                reject(Error('User and Password combo invalid'))
+                reject(Error(errorMessage))
             }
         })
     })
@@ -95,32 +120,45 @@ app.get('/signup', (req, res) => {
 
 app.get('/logout', function(req, res) {
     req.session.destroy(function() {
+        console.log('logout')
         res.redirect('/')
     })
 })
 
+function isFrontend(url) {
+    return url === frontendURL.develop || url === frontendURL.production
+}
+
 app.post('/login', (req, res) => {
-    console.log('login', 'username', req.body.username)
-    console.log('login', 'password', req.body.password)
+    const requestURL = req.headers.referer
+    console.log('login', 'username', req.body.username, 'password', req.body.password)
     authenticate(req.body.username, req.body.password)
         .then(user => {
-            console.log('login', 'attempting to regenerate session')
             req.session.regenerate(() => {
                 req.session.user = user
                 console.log(`login successful as user: ${JSON.stringify(user, null, 4)}`)
             })
-            res.redirect('/')
+            if (isFrontend(requestURL)) {
+                res.send({
+                    body: req.sessionID
+                })
+            } else {
+                res.redirect('/')
+            }
         })
-        .catch(err => {
-            req.session.regenerate(() => {
-                req.session.error = err
-            })
+        .catch(error => {
+            console.log('failed login', error.message)
+            if (isFrontend(requestURL)) {
+                res.send({ body: error.message })
+            } else {
+                res.redirect('/')
+            }
         })
 })
 
 app.post('/signup', (req, res) => {
-    console.log('signup', 'username', req.body.username)
-    console.log('signup', 'password', req.body.password)
+    const requestURL = req.headers.referer
+    console.log('signup', 'username', req.body.username, 'password', req.body.password)
     generateUser(req.body.username, req.body.password)
         .then(user => {
             console.log('signup', 'attempting to regenerate session')
@@ -128,12 +166,21 @@ app.post('/signup', (req, res) => {
                 req.session.user = user
                 console.log(`signup successful as user: ${JSON.stringify(user, null, 4)}`)
             })
-            res.redirect('/')
+            if (isFrontend(requestURL)) {
+                res.send({
+                    body: req.sessionID
+                })
+            } else {
+                res.redirect('/')
+            }
         })
-        .catch(err => {
-            req.session.regenerate(() => {
-                req.session.error = err
-            })
+        .catch(error => {
+            console.log('failed signup', error.message)
+            if (isFrontend(requestURL)) {
+                res.send({ body: error.message })
+            } else {
+                res.redirect('/')
+            }
         })
 })
 
