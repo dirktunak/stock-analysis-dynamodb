@@ -118,10 +118,13 @@ app.get('/signup', (req, res) => {
     res.render('signup')
 })
 
-app.get('/logout', function(req, res) {
+app.post('/logout', function(req, res) {
     req.session.destroy(function() {
-        console.log('logout')
-        res.redirect('/')
+        if (isFrontend(req.headers.referer)) {
+            res.send({ body: 'logged out' })
+        } else {
+            res.redirect('/')
+        }
     })
 })
 
