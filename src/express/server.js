@@ -2,47 +2,19 @@ const express = require('express')
 const AWS = require('aws-sdk')
 const path = require('path')
 const bodyParser = require('body-parser')
-
+const _ = require('lodash')
 const app = (module.exports = express())
-const session = require('express-session')
 
-const authenticate = require('./services/authenticate')
+const userDatabase = require('./services/usersDatabase')
 const isFrontend = require('./services/isFrontend')
+const jwt = require('./services/jwt')
 
 app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname, 'views'))
 
-/*
-const assert = require('assert')
-const DynamoDBStore = require('connect-dynamodb')(session)
-const serverConstants = require('../serverConstants')
-
-const options = {
-    table: 'sessions',
-    AWSConfigPath: '../../.aws/config.json',
-    client: new AWS.DynamoDB({ endpoint: serverConstants.endpoint })
-}
-
-app.use(
-    session({
-        resave: false,
-        saveUninitialized: true,
-        cookie: { secure: true },
-        store: new DynamoDBStore(options),
-        secret: 'express server temp secret'
-    })
-)
-*/
-
 app.use(bodyParser.json())
 app.use(express.urlencoded({ extended: false }))
-app.use(
-    session({
-        resave: false,
-        saveUninitialized: false,
-        secret: 'express server temp secret'
-    })
-)
+
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', 'http://localhost:8080')
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
@@ -57,101 +29,76 @@ app.get('/login', (req, res) => {
     res.render('login')
 })
 
-app.get('/signup', (req, res) => {
-    res.render('signup')
+app.get('/register', (req, res) => {
+    res.render('register')
 })
 
-function restrict(req, res, next) {
-    console.log(req.session.user)
-    if (req.session.user) {
-        next()
-    } else {
-        console.log('Access denied')
-        req.session.error = 'Access denied!'
-        res.redirect('/login')
-    }
-}
-
-app.get('/addStock', restrict, (req, res) => {
+app.get('/addStock', (req, res) => {
     res.render('addStock')
 })
 
+const users = {}
+
 app.post('/logout', function(req, res) {
-    req.session.destroy(function() {
-        if (isFrontend(req.headers.referer)) {
-            res.send({ body: 'logged out' })
-        } else {
-            res.redirect('/')
-        }
-    })
+    if (isFrontend(req.headers.referer)) {
+        res.send({ body: 'logged out' })
+    } else {
+        res.redirect('/')
+    }
+})
+
+app.get('/logout', function(req, res) {
+    if (isFrontend(req.headers.referer)) {
+        res.send({ body: 'logged out' })
+    } else {
+        res.redirect('/')
+    }
 })
 
 app.post('/login', (req, res) => {
     const requestURL = req.headers.referer
-    console.log('login', 'username', req.body.username, 'password', req.body.password)
-    authenticate
-        .authenticate(req.body.username, req.body.password)
-        .then(user => {
-            req.session.regenerate(() => {
-                req.session.user = user
-                console.log(`login successful as user: ${JSON.stringify(user, null, 4)}`)
-                console.log(req.session.user)
-                if (isFrontend.isFrontend(requestURL)) {
-                    res.send({
-                        body: req.sessionID
-                    })
-                } else {
-                    res.redirect('/')
-                }
-            })
-        })
-        .catch(error => {
-            console.log('failed login', error.message)
-            if (isFrontend.isFrontend(requestURL)) {
-                res.send({ body: error.message })
-            } else {
+    const { username, password } = req.body
+    console.log('login', 'username', username, 'password', password)
+    userDatabase.authenticate(username, password, (user, error) => {
+        if(user){
+            const token = jwt.jwtSignSync(user.name)
+            console.log(token)
+            if(isFrontend.isFrontend(requestURL)){
+                res.send({jwt: token})
+            }
+            else{
                 res.redirect('/')
             }
-        })
+        }
+        else{
+            res.send({error: error.message})
+        }
+    })
 })
 
-app.post('/signup', (req, res) => {
+app.post('/register', (req, res) => {
     const requestURL = req.headers.referer
-    console.log('signup', 'username', req.body.username, 'password', req.body.password)
-    authenticate
-        .generateUser(req.body.username, req.body.password)
-        .then(user => {
-            console.log('signup', 'attempting to regenerate session')
-            req.session.regenerate(() => {
-                req.session.user = user
-                console.log(`signup successful as user: ${JSON.stringify(user, null, 4)}`)
-                console.log(req.session.user)
-                console.log(req.sessionID)
-                /*
-                console.debug(req.session)
-                console.debug(req.session.cookie)
-                console.debug(res)
-                */
-                if (isFrontend.isFrontend(requestURL)) {
-                    res.send({
-                        body: req.sessionID
-                    })
-                } else {
-                    res.redirect('/')
-                }
-            })
-        })
-        .catch(error => {
-            console.log('failed signup', error.message)
-            if (isFrontend.isFrontend(requestURL)) {
-                res.send({ body: error.message })
-            } else {
+    const { username, password } = req.body
+    console.log('signup', 'username', username, 'password', password)
+    userDatabase.generateUser(username, password, (user, error) => {
+        if(user){
+            const token = jwt.jwtSignSync(user.name)
+            console.log(token)
+            if(isFrontend.isFrontend(requestURL)){
+                console.log('sending token')
+                res.send({jwt: token})
+            }
+            else{
                 res.redirect('/')
             }
-        })
+        }
+        else{
+            res.send({error: error.message})
+        }
+    })
 })
 
-app.post('/addStock', restrict, (req, res) => {
+app.post('/addStock', (req, res) => {
     console.log(req.body.stock)
     res.redirect('/')
 })
