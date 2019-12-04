@@ -27,15 +27,15 @@ app.get('/', (req, res) => {
     res.render('index')
 })
 
-app.get('/login', (req, res) => {
-    res.render('login')
+app.get('/signin', (req, res) => {
+    res.render('signin')
 })
 
-app.get('/register', (req, res) => {
-    res.render('register')
+app.get('/signup', (req, res) => {
+    res.render('signup')
 })
 
-app.post('/logout', (req, res) => {
+app.post('/signout', (req, res) => {
     if (isFrontend(req.headers.referer)) {
         res.send({ body: 'logged out' })
     } else {
@@ -43,7 +43,7 @@ app.post('/logout', (req, res) => {
     }
 })
 
-app.get('/logout', (req, res) => {
+app.get('/signout', (req, res) => {
     if (isFrontend(req.headers.referer)) {
         res.send({ body: 'logged out' })
     } else {
@@ -51,7 +51,7 @@ app.get('/logout', (req, res) => {
     }
 })
 
-app.post('/login', (req, res) => {
+app.post('/signin', (req, res) => {
     const requestURL = req.headers.referer
     const { username, password } = req.body
     userDatabase.authenticate(username, password, (user, error) => {
@@ -68,7 +68,7 @@ app.post('/login', (req, res) => {
     })
 })
 
-app.post('/register', (req, res) => {
+app.post('/signup', (req, res) => {
     const requestURL = req.headers.referer
     const { username, password } = req.body
     userDatabase.generateUser(username, password, (user, error) => {
@@ -88,7 +88,7 @@ app.post('/register', (req, res) => {
 function protectRoute(req, res, next) {
     const bearerHeader = req.headers.authorization
     if (!bearerHeader) {
-        res.send({ error: 'login is required' })
+        res.send({ error: 'signin is required' })
     }
     jwt.jwtVerifySync(bearerHeader)
         .then(token => {
