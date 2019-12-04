@@ -33,12 +33,6 @@ app.get('/register', (req, res) => {
     res.render('register')
 })
 
-app.get('/addStock', (req, res) => {
-    res.render('addStock')
-})
-
-const users = {}
-
 app.post('/logout', function(req, res) {
     if (isFrontend(req.headers.referer)) {
         res.send({ body: 'logged out' })
@@ -98,9 +92,37 @@ app.post('/register', (req, res) => {
     })
 })
 
-app.post('/addStock', (req, res) => {
-    console.log(req.body.stock)
-    res.redirect('/')
+function protectRoute(req, res, next){
+    const bearerHeader = req.headers.authorization
+    if(!bearerHeader){
+        res.send({error: 'login is required'})
+    }
+    jwt.jwtVerifySync(bearerHeader)
+        .then(token => {
+            req.username = token.data.username
+            next()
+        })
+        .catch(err => {
+            console.error(err)
+            res.send({error: 'Bad authorization, try relogging.'})
+        })
+}
+
+app.post('/addStock', protectRoute, (req, res) => {
+
+    const requestURL = req.headers.referer
+    if(isFrontend.isFrontend(requestURL)){
+        res.send({ body: `Hello ${req.username}.  Successfully added ${req.body.stock} to your portfolio.` })
+    }
+    else{
+        res.redirect('/')
+    }
 })
+
+app.get('/addStock', (req, res) => {
+    res.render('addStock')
+})
+
+
 
 app.listen(3000, () => console.log('Server running on port 3000'))

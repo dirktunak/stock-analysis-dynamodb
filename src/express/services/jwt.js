@@ -11,7 +11,14 @@ function jwtSignAsync(username, ...rest) {
 }
 
 function jwtVerifySync(token) {
-    return jwt.verify(token, 'shhhhh')
+    return new Promise((resolve, reject) => {
+        try{
+            resolve(jwt.verify(token, 'shhhhh'))
+        }
+        catch(err){
+            reject(err)
+        }
+    })
 }
 function jwtVerifyAsync(token) {
     jwt.verify(token, 'shhhhh', function(err, decoded) {
