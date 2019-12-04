@@ -1,10 +1,10 @@
 const frontendURL = {
     develop: 'http://localhost:8080/',
-    production: ''
+    production: 'https://dirktunak.github.io/stock-analysis/'
 }
 
 function isFrontend(url) {
-    return url === frontendURL.develop || url === frontendURL.production
+    return url.includes(frontendURL.develop) || url.includes(frontendURL.production)
 }
 
 module.exports = {

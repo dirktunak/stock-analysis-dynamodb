@@ -1,9 +1,8 @@
 const express = require('express')
-const AWS = require('aws-sdk')
 const path = require('path')
 const bodyParser = require('body-parser')
-const _ = require('lodash')
-const app = (module.exports = express())
+
+const app = express()
 
 const userDatabase = require('./services/usersDatabase')
 const isFrontend = require('./services/isFrontend')
@@ -17,7 +16,10 @@ app.use(express.urlencoded({ extended: false }))
 
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', 'http://localhost:8080')
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
+    res.header(
+        'Access-Control-Allow-Headers',
+        'Origin, X-Requested-With, Content-Type, Authorization, Accept'
+    )
     next()
 })
 
@@ -33,13 +35,7 @@ app.get('/register', (req, res) => {
     res.render('register')
 })
 
-app.get('/addStock', (req, res) => {
-    res.render('addStock')
-})
-
-const users = {}
-
-app.post('/logout', function(req, res) {
+app.post('/logout', (req, res) => {
     if (isFrontend(req.headers.referer)) {
         res.send({ body: 'logged out' })
     } else {
@@ -47,7 +43,7 @@ app.post('/logout', function(req, res) {
     }
 })
 
-app.get('/logout', function(req, res) {
+app.get('/logout', (req, res) => {
     if (isFrontend(req.headers.referer)) {
         res.send({ body: 'logged out' })
     } else {
@@ -58,20 +54,16 @@ app.get('/logout', function(req, res) {
 app.post('/login', (req, res) => {
     const requestURL = req.headers.referer
     const { username, password } = req.body
-    console.log('login', 'username', username, 'password', password)
     userDatabase.authenticate(username, password, (user, error) => {
-        if(user){
+        if (user) {
             const token = jwt.jwtSignSync(user.name)
-            console.log(token)
-            if(isFrontend.isFrontend(requestURL)){
-                res.send({jwt: token})
-            }
-            else{
+            if (isFrontend.isFrontend(requestURL)) {
+                res.send({ jwt: token })
+            } else {
                 res.redirect('/')
             }
-        }
-        else{
-            res.send({error: error.message})
+        } else {
+            res.send({ error: error.message })
         }
     })
 })
@@ -79,28 +71,49 @@ app.post('/login', (req, res) => {
 app.post('/register', (req, res) => {
     const requestURL = req.headers.referer
     const { username, password } = req.body
-    console.log('signup', 'username', username, 'password', password)
     userDatabase.generateUser(username, password, (user, error) => {
-        if(user){
+        if (user) {
             const token = jwt.jwtSignSync(user.name)
-            console.log(token)
-            if(isFrontend.isFrontend(requestURL)){
-                console.log('sending token')
-                res.send({jwt: token})
-            }
-            else{
+            if (isFrontend.isFrontend(requestURL)) {
+                res.send({ jwt: token })
+            } else {
                 res.redirect('/')
             }
-        }
-        else{
-            res.send({error: error.message})
+        } else {
+            res.send({ error: error.message })
         }
     })
 })
 
-app.post('/addStock', (req, res) => {
-    console.log(req.body.stock)
-    res.redirect('/')
+function protectRoute(req, res, next) {
+    const bearerHeader = req.headers.authorization
+    if (!bearerHeader) {
+        res.send({ error: 'login is required' })
+    }
+    jwt.jwtVerifySync(bearerHeader)
+        .then(token => {
+            req.username = token.data.username
+            next()
+        })
+        .catch(err => {
+            console.error(err)
+            res.send({ error: 'Bad authorization, try relogging.' })
+        })
+}
+
+app.post('/addStock', protectRoute, (req, res) => {
+    const requestURL = req.headers.referer
+    if (isFrontend.isFrontend(requestURL)) {
+        res.send({
+            body: `Hello ${req.username}.  Successfully added ${req.body.stock} to your portfolio.`
+        })
+    } else {
+        res.redirect('/')
+    }
+})
+
+app.get('/addStock', (req, res) => {
+    res.render('addStock')
 })
 
 app.listen(3000, () => console.log('Server running on port 3000'))
