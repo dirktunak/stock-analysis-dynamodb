@@ -35,7 +35,7 @@ app.get('/signup', (req, res) => {
     res.render('signup')
 })
 
-app.post('/logout', (req, res) => {
+app.post('/signout', (req, res) => {
     if (isFrontend(req.headers.referer)) {
         res.send({ body: 'logged out' })
     } else {
@@ -43,7 +43,7 @@ app.post('/logout', (req, res) => {
     }
 })
 
-app.get('/logout', (req, res) => {
+app.get('/signout', (req, res) => {
     if (isFrontend(req.headers.referer)) {
         res.send({ body: 'logged out' })
     } else {
