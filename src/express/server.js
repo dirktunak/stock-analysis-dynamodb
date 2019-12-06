@@ -1,6 +1,8 @@
 const express = require('express')
 const path = require('path')
 const bodyParser = require('body-parser')
+const fs = require('fs')
+const https = require('https')
 
 const app = express()
 
@@ -16,6 +18,7 @@ app.use(express.urlencoded({ extended: false }))
 
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', 'http://localhost:8080')
+    res.header('Access-Control-Allow-Origin', 'https://dirktunak.github.io')
     res.header(
         'Access-Control-Allow-Headers',
         'Origin, X-Requested-With, Content-Type, Authorization, Accept'
@@ -115,5 +118,7 @@ app.post('/addStock', protectRoute, (req, res) => {
 app.get('/addStock', (req, res) => {
     res.render('addStock')
 })
-
-app.listen(3000, () => console.log('Server running on port 3000'))
+https.createServer({
+	key: fs.readFileSync('server.key'),
+	cert: fs.readFileSync('server.cert')
+}, app).listen(3000, () => console.log('Server running on port 3000'))
